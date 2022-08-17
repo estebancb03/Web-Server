@@ -4,13 +4,15 @@
 /// @author Daniel Lizano Morales <daniel.lizanomorales@ucr.ac.cr>
 /// @author Andrea Ramírez Rojas <andrea.ramirezrojas@ucr.ac.cr>
 /// @author Carlos Ramírez Masís <carlos.ramirezmasis@ucr.ac.cr>
-#ifndef GOLDBACH_HPP
-#define GOLDBACH_HPP
-#include <iostream>
-#include <vector>
-#include <string>
 
-class Goldbach {
+#ifndef SOLVER_HPP
+#define SOLVER_HPP
+
+#include <string>
+#include <vector>
+#include <iostream>
+
+class Solver {
  private:
     // Variable to do the calculations
     int64_t value;
@@ -24,7 +26,6 @@ class Goldbach {
     std::vector<int64_t> sums;
     // Array containing the prime numbers
     std::vector<int64_t> primeNumbers;
-    
     /**
      * @brief Check if the number is negative or not
      */
@@ -70,8 +71,8 @@ class Goldbach {
     void generateCount();
 
  public:
-    explicit Goldbach(int64_t value);  // Constructor
-    ~Goldbach();  // Destroyer
+    explicit Solver(int64_t value);  // Constructor
+    ~Solver();  // Destroyer
     /**
      * @brief The calculation methods of prime numbers and sums are invoked
      */
@@ -84,4 +85,4 @@ class Goldbach {
     std::vector<std::string> getSolutions();
 };
 
-#endif  // !GOLDBACH_H
+#endif  // !SOLVER_H

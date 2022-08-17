@@ -28,6 +28,8 @@ class Queue {
   Semaphore canConsume;
   /// Contains the actual data shared between producer and consumer
   std::queue<DataType> queue;
+  /// Indicates number of elements in the queue at a specific moment
+  size_t capacity = 0;
 
  public:
   /// Constructor
@@ -45,6 +47,7 @@ class Queue {
   void push(const DataType& data) {
     this->mutex.lock();
     this->queue.push(data);
+    this->capacity++;
     this->mutex.unlock();
     this->canConsume.signal();
   }
@@ -57,8 +60,14 @@ class Queue {
     this->mutex.lock();
     DataType result = this->queue.front();
     this->queue.pop();
+    this->capacity--;
     this->mutex.unlock();
     return result;
+  }
+
+  /// Returns capacity of the queue at the moment this subroutine is called
+  size_t getSize(){
+    return this->capacity;
   }
 };
 

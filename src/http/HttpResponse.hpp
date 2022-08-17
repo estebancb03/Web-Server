@@ -13,6 +13,8 @@ class HttpResponse : public HttpMessage {
  public:
   /// Objects of this class can be copied, but avoid innecesary copies
   DECLARE_RULE4(HttpResponse, default);
+  // Value to do the comparations
+  int64_t testValue;
 
  public:
   /// Statard status codes and their reason phrases according to RFC 7231
@@ -27,6 +29,15 @@ class HttpResponse : public HttpMessage {
   std::string reasonPhrase;
 
  public:
+  /// @brief stop condition constructor
+  HttpResponse();
+  /**
+   * @brief Operator == overloading
+   * @param other 
+   * @return int 
+   */
+  int operator==(const HttpResponse & other) const;
+
   /// Constructor
   explicit HttpResponse(const Socket& socket);
   /// Destructor

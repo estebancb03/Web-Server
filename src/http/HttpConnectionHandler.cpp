@@ -5,40 +5,30 @@
 /// @author Andrea Ramírez Rojas <andrea.ramirezrojas@ucr.ac.cr>
 /// @author Carlos Ramírez Masís <carlos.ramirezmasis@ucr.ac.cr>
 
-#include <string>
-
-#include "HttpApp.hpp"
 #include "HttpConnectionHandler.hpp"
-#include "Log.hpp"
-#include "NetworkAddress.hpp"
 
-HttpConnectionHandler::HttpConnectionHandler(HttpServer* httpserver,
- std::vector<HttpApp*>& applications) {
-  setHttpServer(httpserver);
-  for (uint64_t index = 0; index < applications.size(); index++) {
-    this->httpApps.push_back(applications[index]);
-  }
+HttpConnectionHandler::HttpConnectionHandler(HttpServer* httpServer,
+ std::vector<HttpApp*>& httpApps) {
+  setHttpServer(httpServer);
+  this->httpApps = httpApps;
 }
 
 HttpConnectionHandler::~HttpConnectionHandler() {
 }
 
-void HttpConnectionHandler::setHttpServer(HttpServer* httpserver) {
-  server = httpserver;
-  setConsumingQueue(server->getSocketsQueue());
+void HttpConnectionHandler::setHttpServer(HttpServer* httpServer) {
+  this->httpServer = httpServer;
+  setConsumingQueue(httpServer->getSocketsQueue());
+  setProducingQueue(httpServer->getOrderPackagesQueue());
 }
 
 int HttpConnectionHandler::run() {
-  // Comienza el loop que consume todo los mensajes que llega
+  // Starts the loop that consumes all the messages that arrive
   this->consumeForever();
   return EXIT_SUCCESS;
 }
 
 void HttpConnectionHandler::consume(Socket client) {
-  // TODO(you): Make this method concurrent. Store client connections (sockets)
-  // into a collection (e.g thread-safe queue) and stop
-
-  // TODO(you) Move the following loop to a consumer thread class
   // While the same client asks for HTTP requests in the same connection
   while (true) {
     // Create an object that parses the HTTP request from the socket
@@ -55,9 +45,10 @@ void HttpConnectionHandler::consume(Socket client) {
     // A complete HTTP client request was received. Create an object for the
     // server responds to that client's request
     HttpResponse httpResponse(client);
+    OrderPackage orderPackage(httpRequest, httpResponse);
 
     // Give subclass a chance to respond the HTTP request
-    const bool handled = this->handleHttpRequest(httpRequest, httpResponse);
+    const bool handled = this->handleHttpRequest(orderPackage);
 
     // If subclass did not handle the request or the client used HTTP/1.0
     if (!handled || httpRequest.getHttpVersion() == "HTTP/1.0") {
@@ -68,58 +59,35 @@ void HttpConnectionHandler::consume(Socket client) {
   }
 }
 
-bool HttpConnectionHandler::handleHttpRequest(HttpRequest& httpRequest,
-  HttpResponse& httpResponse) {
+bool HttpConnectionHandler::handleHttpRequest(OrderPackage& orderPackage) {
   // Print IP and port from client
-  const NetworkAddress& address = httpRequest.getNetworkAddress();
+  const NetworkAddress& address = orderPackage.httpRequest.getNetworkAddress();
   Log::append(Log::INFO, "connection",
     std::string("connection established with client ") + address.getIP()
     + " port " + std::to_string(address.getPort()));
 
   // Print HTTP request
-  Log::append(Log::INFO, "request", httpRequest.getMethod()
-    + ' ' + httpRequest.getURI()
-    + ' ' + httpRequest.getHttpVersion());
+  Log::append(Log::INFO, "request", orderPackage.httpRequest.getMethod()
+    + ' ' + orderPackage.httpRequest.getURI()
+    + ' ' + orderPackage.httpRequest.getHttpVersion());
 
-  return this->route(httpRequest, httpResponse);
+  this->produce(orderPackage);
+  return this->route();
 }
 
-bool HttpConnectionHandler::route(HttpRequest& httpRequest,
- HttpResponse& httpResponse) {
+bool HttpConnectionHandler::route() {
   // Traverse the chain of applications
   for (size_t index = 0; index < this->httpApps.size(); ++index) {
     // If this application handles the request
     HttpApp* app = this->httpApps[index];
-    if (app->handleHttpRequest(httpRequest, httpResponse)) {
+    Queue<HttpResponse>* queue =
+     app->handleHttpRequest(this->httpServer->getRoutedOrderPackagesQueue());
+    if (queue) {
+      Queue<HttpResponse>* queue2 =
+       this->httpServer->httpResponseConsumer->getConsumingQueue();
+      queue2->push(queue->pop());
       return true;
     }
   }
-
-  // Unrecognized request
-  return this->serveNotFound(httpRequest, httpResponse);
-}
-
-bool HttpConnectionHandler::serveNotFound(HttpRequest& httpRequest
-  , HttpResponse& httpResponse) {
-  (void)httpRequest;
-
-  // Set HTTP response metadata (headers)
-  httpResponse.setStatusCode(404);
-  httpResponse.setHeader("Server", "AttoServer v1.0");
-  httpResponse.setHeader("Content-type", "text/html; charset=ascii");
-
-  // Build the body of the response
-  std::string title = "Not found";
-  httpResponse.body() << "<!DOCTYPE html>\n"
-    << "<html lang=\"en\">\n"
-    << "  <meta charset=\"ascii\"/>\n"
-    << "  <title>" << title << "</title>\n"
-    << "  <style>body {font-family: monospace} h1 {color: red}</style>\n"
-    << "  <h1>" << title << "</h1>\n"
-    << "  <p>The requested resouce was not found on this server.</p>\n"
-    << "  <hr><p><a href=\"/\">Homepage</a></p>\n"
-    << "</html>\n";
-
-  // Send the response to the client (user agent)
-  return httpResponse.send();
+  return false;
 }

@@ -8,14 +8,21 @@
 #ifndef HTTPCONNECTIONHANDLER_H
 #define HTTPCONNECTIONHANDLER_H
 
+#include <string>
 #include <vector>
 
+#include "Log.hpp"
+#include "Queue.hpp"
+#include "Socket.hpp"
+#include "HttpApp.hpp"
+#include "Consumer.hpp"
+#include "Assembler.hpp"
 #include "HttpServer.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "Queue.hpp"
-#include "Socket.hpp"
-#include "Consumer.hpp"
+#include "OrderPackage.hpp"
+#include "NetworkAddress.hpp"
+#include "HttpDispatcher.hpp"
 
 class HttpApp;
 class HttpServer;
@@ -28,46 +35,22 @@ class HttpServer;
  *   true: if the number is prime
  *   false: if the number is not prime 
  */
-class HttpConnectionHandler : public Consumer <Socket> {
- protected:
-  /// A pointer to the server
-  HttpServer *server;
-  /// A pointer of a vector of web applications
+class HttpConnectionHandler : public Assembler <Socket, OrderPackage> {
+ private:
+  // A pointer to the server
+  HttpServer* httpServer;
+  // A pointer of a vector of web applications
   std::vector<HttpApp*> httpApps;
-  /**
-   * @brief Each thread handles one client request at the time
-   * @param httpRequest The request of the client which needs to be worked
-   * @param httpResponse The response the client will get at the end
-   * @return boolean result of route()
-   */
-  bool handleHttpRequest(HttpRequest& httpRequest,
-    HttpResponse& httpResponse);
-  /**
-   * @brief Checks which web application has to process the request recieved
-   * @param httpRequest The request of the client which needs to be worked
-   * @param httpResponse The response the client will get at the end
-   * @return 
-   *   true: If this application handles the request
-   *   false: Unrecognized request
-   */
-  bool route(HttpRequest& httpRequest, HttpResponse& httpResponse);
-  /**
-   * @brief Tells the client that no web application can process their request
-   * @param httpRequest The request of the client which needs to be worked
-   * @param httpResponse The response the client will get at the end
-   * @return boolean result
-   */
-  bool serveNotFound(HttpRequest& httpRequest, HttpResponse& httpResponse);
 
  public:
   /**
    * @brief HttpConnectionHandler's constructor
    * @param httpserver A pointer to the server
-   * @param applications A pointer of a vector of web applications
+   * @param httpApps A pointer of a vector of web applications
    * @return object (thread) of type HttpConnectionHandler
    */
   explicit HttpConnectionHandler(HttpServer *httpserver,
-   std::vector<HttpApp*>& applications);
+    std::vector<HttpApp*>& httpApps);
 
   /**
    * @brief HttpConnectionHandler's destructor
@@ -76,11 +59,10 @@ class HttpConnectionHandler : public Consumer <Socket> {
 
   /**
    * @brief Sets httpServer to be used by HttpConnectionHandler threads
-   * @param httpserver A pointer to the server
+   * @param httpServer A pointer to the server
    */
-  void setHttpServer(HttpServer *httpserver);
+  void setHttpServer(HttpServer *httpServer);
 
-    // sobrescribe la funcion de Thread
   /**
    * @brief Overwrites Thread run() function, which creates threads
    * @return Error code, 0 for success
@@ -93,7 +75,23 @@ class HttpConnectionHandler : public Consumer <Socket> {
    * @param client A socket (request) from the client
    */
   void consume(Socket client) override;
-};
 
+  /**
+   * @brief Each thread handles one orderPackage at the time,
+   * then produces a new orderPackage and calls route() subroutine
+   * @param orderPackage The request of the client which needs to be worked
+   * @return boolean result of route()
+   */
+  bool handleHttpRequest(OrderPackage& orderPackage);
+
+  /**
+   * @brief Checks which web application has to process the orderPackage recieved
+   * and sets consumingQueue of HttpResponseConsumer
+   * @return 
+   *   true: If this application handles the orderPackage
+   *   false: Unrecognized orderPackage
+   */
+  bool route();
+};
 
 #endif  // HTTPCONNECTIONHANDLER_H

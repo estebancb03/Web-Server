@@ -1,4 +1,4 @@
-# **Web Server 1.1**
+# **Web Server 1.2**
 
 ## Descripción del problema
 
@@ -40,7 +40,7 @@ Existen tres formas de ejecutar el servidor, la primera es utilizando los valore
 bin/Web-Server 
 ```
 
-En este ejemplo anterior el servidor correrá en el puerto 8080 que es el puerto que se designó por defecto y utilizará la cantidad máxima de CPU's disponibles.
+En este ejemplo anterior el servidor correrá en el puerto 8080 que es el puerto que se designó por defecto y utilizará la cantidad máxima de CPU's disponibles para asignar el total de hilos HttpConnectionHandler y de hilos GoldbachAssembler que usará el programa.
 
 Si se desea indicar un puerto específico a utilizar se envia como parámetro de la siguiente forma:
 
@@ -48,15 +48,15 @@ Si se desea indicar un puerto específico a utilizar se envia como parámetro de
 bin/Web-Server 3000
 ```
 
-En el ejemplo anterior el servidor correrá en el puerto 3000 y utilizará tantos hilos como CPU's disponibles halla. Se recomienda no insertar un número de puerto menor a 1024 ya que se necesitará de permisos de administrador para hacerlo.
+En el ejemplo anterior el servidor correrá en el puerto 3000 y utilizará tantos hilos HttpConnectionHandler y GoldbachAssembler como CPU's disponibles halla. Se recomienda no insertar un número de puerto menor a 1024 ya que se necesitará de permisos de administrador para hacerlo.
 
-Si en cambio se desea ejecutar el servidor con una cantidad de hilos determinada se puede indicar el número de puerto como segundo parámetro:
+Si en cambio se desea ejecutar el servidor con una cantidad de hilos HttpConnectionHandler y GoldbachAssembler determinada se puede indicar el número de puerto como segundo parámetro:
 
 ``` text
 bin/Web-Server 3000 8
 ```
 
-En este caso el servidor correrá en el puerto 3000 y utilizará solamente ocho hilos de ejecución.
+En este caso el servidor correrá en el puerto 3000 y utilizará ocho hilos HttpConnectionHandler y GoldbachAssembler.
 
 Para detener la ejecución, hay dos maneras: 
 

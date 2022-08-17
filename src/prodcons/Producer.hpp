@@ -17,15 +17,16 @@
  */
 template <typename DataType>
 class Producer : public virtual Thread {
-  /// Objects of this class cannot be copied
   DISABLE_COPY(Producer);
 
  protected:
-  /// This thread will produce for this queue
   Queue<DataType>* producingQueue;
 
  public:
-  /// Constructor
+  /**
+   * @brief Constructor
+   * @param queue
+   */
   explicit Producer(Queue<DataType>* producingQueue = nullptr)
     : producingQueue(producingQueue) {
   }
@@ -34,17 +35,27 @@ class Producer : public virtual Thread {
   virtual ~Producer() {
   }
 
-  /// Get access to the queue where this thread will produce
+  /**
+   * @brief da acceso a la cola donde esta hilo produce
+   * @return la cola donde esta hilo produce
+   */
   inline Queue<DataType>* getProducingQueue() {
     return this->producingQueue;
   }
 
-  /// Set the queue where this thread will produce elements
+  /**
+   * @brief setea la cola donde los hilos producen los elementos
+   * @param producingQueue 
+   */
   inline void setProducingQueue(Queue<DataType>* producingQueue) {
     this->producingQueue = producingQueue;
   }
 
-  /// Add to the queue the produced data unit
+  /**
+   * @brief añade a la lista la data que se encuentra 
+   * en la fila de produccion.
+   * @param data 
+   */
   virtual void produce(const DataType& data) {
     assert(this->producingQueue);
     this->producingQueue->push(data);

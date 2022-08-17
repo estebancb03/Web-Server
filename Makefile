@@ -1,9 +1,4 @@
-# @copyright 2021 ECCI, Universidad de Costa Rica. All rights reserved
-# This code is released under the GNU Public License version 3
-# @author Esteban Castañeda Blanco <esteban.castaneda@ucr.ac.cr>
-# @author Daniel Lizano Morales <daniel.lizanomorales@ucr.ac.cr>
-# @author Andrea Ramírez Rojas <andrea.ramirezrojas@ucr.ac.cr>
-# @author Carlos Ramírez Masís <carlos.ramirezmasis@ucr.ac.cr>
+# C/C++ Makefile v2.2.2 2021-Set-17 Jeisson Hidalgo ECCI-UCR CC-BY 4.0
 
 # Compiler and tool flags
 CC=cc

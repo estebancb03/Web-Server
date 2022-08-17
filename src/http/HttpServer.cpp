@@ -1,21 +1,11 @@
-// Copyright 2021 Jeisson Hidalgo-Cespedes. Universidad de Costa Rica. CC BY 4.0
+/// @copyright 2021 ECCI, Universidad de Costa Rica. All rights reserved
+/// This code is released under the GNU Public License version 3
+/// @author Esteban Castañeda Blanco <esteban.castaneda@ucr.ac.cr>
+/// @author Daniel Lizano Morales <daniel.lizanomorales@ucr.ac.cr>
+/// @author Andrea Ramírez Rojas <andrea.ramirezrojas@ucr.ac.cr>
+/// @author Carlos Ramírez Masís <carlos.ramirezmasis@ucr.ac.cr>
 
-#include <unistd.h>
-#include <cassert>
-#include <stdexcept>
-#include <string>
-#include <csignal>
-
-#include "HttpApp.hpp"
 #include "HttpServer.hpp"
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
-#include "Log.hpp"
-#include "NetworkAddress.hpp"
-#include "Socket.hpp"
-#include "Producer.hpp"
-#include "Queue.hpp"
-#include "Consumer.hpp"
 
 // TODO(you): Implement connection handlers argument
 const char* const usage =
@@ -36,7 +26,7 @@ void HttpServer::listenForever(const char* port) {
 }
 
 void HttpServer::handleClientConnection(Socket& client) {
-  // Se agrega un socket a la cola
+  // Socket is added to the queue
   this->socketsQueue->push(client);
 }
 
@@ -46,8 +36,14 @@ void HttpServer::chainWebApp(HttpApp* application) {
 }
 
 int HttpServer::start(int argc, char* argv[]) {
-  // Se crea la cola de sockets
+  // Sockets queue is created
   this->socketsQueue = new Queue<Socket>;
+  // HttpOrders queue is created
+  this->orderPackagesQueue = new Queue<OrderPackage>;
+  // HttpRoutedOrdersQueue queue is created
+  this->routedOrderPackagesQueue = new Queue<OrderPackage>;
+  // httpResponseQueue queue is created
+  this->httpResponseQueue = new Queue<HttpResponse>;
 
   bool stopApps = false;
   try {
@@ -62,21 +58,30 @@ int HttpServer::start(int argc, char* argv[]) {
         // Start all web applications
         for (size_t index = 0; index < this->applications.size(); ++index) {
           this->applications[index]->start();
-          // this->applications[index]->startThread();
-        }
         stopApps = true;
+        }
 
-        // Se redefine el tam del vector a la cantidad maxima de conexiones
+        // Se inicializa hilo del dispatcher
+        this->httpDispatcher = new HttpDispatcher(this->orderPackagesQueue,
+         this->routedOrderPackagesQueue);
+        this->httpDispatcher->startThread();
+
+        this->httpResponseConsumer =
+         new HttpResponseConsumer(this->httpResponseQueue);
+        // HttpResponseConsumer thread is created
+        this->httpResponseConsumer->startThread();
+        // Start the server
+        // Connections array size is redefined
         this->connections.resize(maxConnections);
-        // Para cada conexion, cree un HttpConnectionHandler
-        // Para cada HttpConnectionHandler, cree un hilo
+
         for (int64_t index = 0; index < maxConnections; index++) {
+          // For each connection a HttpConnectionHandler is created
           this->connections[index] = new HttpConnectionHandler(this,
             applications);
           assert(this->connections[index]);
+          // For each HttpConnectionHandler a thread is created
           this->connections[index]->startThread();
         }
-
         // Start waiting for connections
         this->listenForConnections(this->port);
         const NetworkAddress& address = this->getNetworkAddress();
@@ -89,30 +94,44 @@ int HttpServer::start(int argc, char* argv[]) {
       }
     }
   } catch (const std::runtime_error& error) {
-     // Creamos sockets vacios
     Socket empty = Socket();
-    // Para cada connections ...
     for (int64_t index = 0; index < (int64_t) this->connections.size();
      index++) {
-      // Pone un socket vacio en la cola
+      // For each connection an empty socket is added to the queue
       this->socketsQueue->push(empty);
     }
 
-    // Para cada connections ...
     for (int64_t index = 0; index < (int64_t) this->connections.size();
      index++) {
-      // Hace join al hilo
+      // For each connection its thread is joinned
       this->connections[index]->waitToFinish();
     }
 
-    // Elimina la cola
+    // Sockets queue is deleted
     delete this->socketsQueue;
+    // orderPackagesQueue queue is deleted
+    delete this->orderPackagesQueue;
+    // routedOrderPackagesQueue queue is deleted
+    delete this->routedOrderPackagesQueue;
+    // httpResponseQueue queue is deleted
+    delete this->httpResponseQueue;
+
+    // Stop all web applications
 
     for (HttpConnectionHandler* consumer : this->connections) {
       delete consumer;
     }
     std::cerr << "\nerror: " << error.what() << std::endl;
+    // httpDispatcher its thread is joinned
+    this->httpDispatcher->waitToFinish();
+    // httpResponseConsumer its thread is joinned
+    this->httpResponseConsumer->waitToFinish();
+    // httpDispatcher is deleted
+    delete this->httpDispatcher;
+    // httpResponseConsumer is deleted
+    delete this->httpResponseConsumer;
   }
+
 
   // If applications were started
   if (stopApps) {
@@ -121,7 +140,6 @@ int HttpServer::start(int argc, char* argv[]) {
       this->applications[index]->stop();
     }
   }
-
   // Stop the log service
   Log::getInstance().stop();
 
@@ -166,6 +184,15 @@ void HttpServer::sigHandler(int signal) {
 
 Queue<Socket>* HttpServer::getSocketsQueue() {
   return this->socketsQueue;
+}
+
+
+Queue<OrderPackage>* HttpServer::getOrderPackagesQueue() {
+  return this->orderPackagesQueue;
+}
+
+Queue<OrderPackage>* HttpServer::getRoutedOrderPackagesQueue() {
+  return this->routedOrderPackagesQueue;
 }
 
 

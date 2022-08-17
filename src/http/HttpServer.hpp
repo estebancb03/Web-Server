@@ -1,25 +1,43 @@
-// Copyright 2021 Jeisson Hidalgo-Cespedes. Universidad de Costa Rica. CC BY 4.0
+/// @copyright 2021 ECCI, Universidad de Costa Rica. All rights reserved
+/// This code is released under the GNU Public License version 3
+/// @author Esteban Castañeda Blanco <esteban.castaneda@ucr.ac.cr>
+/// @author Daniel Lizano Morales <daniel.lizanomorales@ucr.ac.cr>
+/// @author Andrea Ramírez Rojas <andrea.ramirezrojas@ucr.ac.cr>
+/// @author Carlos Ramírez Masís <carlos.ramirezmasis@ucr.ac.cr>
 
 #ifndef HTTPSERVER_H
 #define HTTPSERVER_H
 
 #include <unistd.h>
+#include <string>
 #include <vector>
+#include <cassert>
+#include <csignal>
+#include <stdexcept>
 
-#include "Goldbach.hpp"
+#include "Log.hpp"
+#include "Queue.hpp"
+#include "Socket.hpp"
+#include "HttpApp.hpp"
+#include "Producer.hpp"
+#include "Consumer.hpp"
 #include "TcpServer.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "OrderPackage.hpp"
+#include "NetworkAddress.hpp"
+#include "HttpDispatcher.hpp"
+#include "HttpResponseConsumer.hpp"
 #include "HttpConnectionHandler.hpp"
-#include "Queue.hpp"
 
 #define DEFAULT_PORT "8080"
 #define DEFAULT_MAX_CONNECTIONS sysconf(_SC_NPROCESSORS_ONLN);
 
 class HttpApp;
+class HttpDispatcher;
 class HttpConnectionHandler;
+class HttpResponseConsumer;
 
-/// TODO: Documentation
 class HttpServer : public TcpServer {
   DISABLE_COPY(HttpServer);
 
@@ -38,25 +56,31 @@ class HttpServer : public TcpServer {
   /// call the httpResponse.send() and the chain stops. If no web app serves
   /// the request, the not found page will be served.
   std::vector<HttpApp*> applications;
-
-  // Save the numbers given by the user
-  std::vector<int64_t> numbersArray;
-
   // Save the created sockets
   Queue<Socket>* socketsQueue;
-
   // Save pointers to HttpConnectionHandler to handle sockets
   std::vector<HttpConnectionHandler*> connections;
+  // A queue of OrderPackages
+  Queue<OrderPackage>* orderPackagesQueue;
+  // A queue of OrderPackages
+  Queue<OrderPackage>* routedOrderPackagesQueue;
+  // A queue of HttpResponses
+  Queue<HttpResponse>* httpResponseQueue;
+  // A pointer of HttpDispatcher object
+  HttpDispatcher* httpDispatcher;
+
+ public:
+  // A pointer of HttpResponseConsumer object
+  HttpResponseConsumer* httpResponseConsumer;
 
  public:
   /**
    * @brief Construct a new Http Server object
-   * 
    */
   HttpServer();
+
   /**
    * @brief Destroy the Http Server object
-   * 
    */
   ~HttpServer();
 
@@ -111,8 +135,19 @@ class HttpServer : public TcpServer {
    */
   Queue<Socket>* getSocketsQueue();
 
- protected:
+  /**
+   * @brief Get the OrderPackage Queue object
+   * @return Queue<OrderPackage>* A OrderPackage queue pointer
+   */
+  Queue<OrderPackage>* getOrderPackagesQueue();
 
+  /**
+   * @brief Get the routed OrderPackage Queue object
+   * @return Queue<OrderPackage>* A ordered OrderPackage queue pointer
+   */
+  Queue<OrderPackage>* getRoutedOrderPackagesQueue();
+
+ protected:
   /**
    * @brief Analyze the command line arguments
    * @param argc Number of arguments received by the program

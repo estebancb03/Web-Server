@@ -1,0 +1,16 @@
+procedure start
+    set consumingQueue of packer and dispatcher
+    set startThread of packer and dispatcher
+end procedure
+
+procedure run()
+    consumeForever()
+end procedure
+
+procedure consume(httpResponse)
+    set input_string = getNumbers(URI)
+    set input_queue = basen on input_string
+    for (index < number of inputs from user)
+        set input_queue = input_queue + input_string[index]
+    end for
+end procedure

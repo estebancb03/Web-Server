@@ -7,8 +7,11 @@
 #include "HttpResponse.hpp"
 #include "Socket.hpp"
 
+HttpResponse::HttpResponse() : HttpMessage{Socket()}, testValue(-1) {
+}
+
 HttpResponse::HttpResponse(const Socket& socket)
-  : HttpMessage{socket} {
+  : HttpMessage{socket}, testValue(0) {
 }
 
 HttpResponse::~HttpResponse() {
@@ -99,6 +102,10 @@ bool HttpResponse::sendBodyMetadata() {
 std::string HttpResponse::buildStatusLine() const {
   return this->httpVersion + ' ' + std::to_string(this->statusCode) + ' '
     + this->reasonPhrase;
+}
+
+int HttpResponse::operator==(const HttpResponse & other) const {
+  return this->testValue == other.testValue;
 }
 
 // {Code, "Reason-Phrase"}
