@@ -1,0 +1,131 @@
+// Copyright 2021 Jeisson Hidalgo-Cespedes. Universidad de Costa Rica. CC BY 4.0
+
+#ifndef HTTPSERVER_H
+#define HTTPSERVER_H
+
+#include <unistd.h>
+#include <vector>
+
+#include "Goldbach.hpp"
+#include "TcpServer.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
+#include "HttpConnectionHandler.hpp"
+#include "Queue.hpp"
+
+#define DEFAULT_PORT "8080"
+#define DEFAULT_MAX_CONNECTIONS sysconf(_SC_NPROCESSORS_ONLN);
+
+class HttpApp;
+class HttpConnectionHandler;
+
+/// TODO: Documentation
+class HttpServer : public TcpServer {
+  DISABLE_COPY(HttpServer);
+
+ protected:
+  /// Lookup criteria for searching network information about this host
+  struct addrinfo hints;
+  /// TCP port where this web server will listen for connections
+  const char* port = DEFAULT_PORT;
+
+  // Save the maximum number of connections
+  int64_t maxConnections = DEFAULT_MAX_CONNECTIONS;
+
+  /// Chain of registered web applications. Each time an incoming HTTP request
+  /// is received, the request is provided to each application of this chain.
+  /// If an application detects the request is for it, the application will
+  /// call the httpResponse.send() and the chain stops. If no web app serves
+  /// the request, the not found page will be served.
+  std::vector<HttpApp*> applications;
+
+  // Save the numbers given by the user
+  std::vector<int64_t> numbersArray;
+
+  // Save the created sockets
+  Queue<Socket>* socketsQueue;
+
+  // Save pointers to HttpConnectionHandler to handle sockets
+  std::vector<HttpConnectionHandler*> connections;
+
+ public:
+  /**
+   * @brief Construct a new Http Server object
+   * 
+   */
+  HttpServer();
+  /**
+   * @brief Destroy the Http Server object
+   * 
+   */
+  ~HttpServer();
+
+  /**
+   * @brief Registers a web application to the chain
+   * @param application A pointer to HttpApp
+   */
+  void chainWebApp(HttpApp* application);
+
+  /**
+   * @brief Start the web server for listening client connections and HTTP requests
+   * @param argc Number of arguments received by the program
+   * @param argv Argument vector received by the program
+   * @return EXIT_SUCCESS
+   */
+  int start(int argc, char* argv[]);
+
+  /**
+   * @brief Stop the web server.
+   * @details The server may stop not immediately. It will stop
+   * for listening further connection requests at once, but pending HTTP
+   * requests that are enqueued will be allowed to finish
+   */
+  void stop();
+
+  /**
+   * @brief  Infinetelly listen for client connection requests and accept all of them.
+   * @details For each accepted connection request, the virtual onConnectionAccepted()
+   * will be called. Inherited classes must override that method
+   * @param port Port that connects to the server
+   */
+  void listenForever(const char* port);
+
+  /**
+   * @brief Get the Instance object
+   * @details Singleton object
+   * @return HttpServer& A reference to the server
+   */
+  static HttpServer& getInstance();
+
+  /**
+   * @brief Handles the terminal signal 
+   * @details Adapted from: 
+   * https://www.thegeekstuff.com/2012/03/catch-signals-sample-c-code/
+   * @param signal Number of the signal
+   */
+  static void sigHandler(int signal);
+
+  /**
+   * @brief Get the Sockets Queue object
+   * @return Queue<Socket>* A pointer to the start of the vector
+   */
+  Queue<Socket>* getSocketsQueue();
+
+ protected:
+
+  /**
+   * @brief Analyze the command line arguments
+   * @param argc Number of arguments received by the program
+   * @param argv Argument vector received by the program
+   *  @return true if program can continue execution, false otherwise
+   */
+  bool analyzeArguments(int argc, char* argv[]);
+
+  /**
+   * @brief Add the socket to the socket queue
+   * @param client A reference to Sockect
+   */
+  void handleClientConnection(Socket& client) override;
+};
+
+#endif  // HTTPSERVER_H

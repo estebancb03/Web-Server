@@ -1,0 +1,53 @@
+procedure HttpConnectionHandler(server, applications)
+  for index = 0 hasta applications.size():
+    meter applications[index] al httpApps
+  end for
+end procedure
+
+procedure ~HttpConnectionHandler()
+end procedure
+
+procedure setHttpServer(httpserver)
+  server = httpserver
+  setConsumingQueue(server->getSocketsQueue())
+end procedure
+
+procedure run()
+  consumeForever()
+  return EXIT_SUCCESS
+end procedure
+
+procedure consume(client)
+  while true 
+    Crea objeto HttpRequest httpRequest(client)
+    if !httpRequest.parse() 
+      break
+    end if
+    Crea objeto HttpResponse httpResponse(client)
+    handled = handleHttpRequest(httpRequest, httpResponse)
+    if !handled || httpRequest.getHttpVersion() == "HTTP/1.0"
+      client.close()
+      break
+    end if
+  end while
+end procedure
+
+procedure handleHttpRequest(httpRequest, httpResponse)
+  Crea objeto NetworkAddress& address = httpRequest.getNetworkAddress()
+  Imprime el mensaje de conexión junto al número de puerto
+  Imprime la solicitud del cliente
+  return route(httpRequest, httpResponse)
+end procedure
+
+procedure route(HttpRequest, HttpResponse)
+  for i := 0 to httpApps.size()
+    Http app = httpApps[i]
+    if (handleHttpRequest(httpRequest,httpResponse))
+      return true
+end procedure
+
+procedure serverNotFound(HttpRequest, httpResponse)
+  set status to 404
+  display "page not found"
+  return httpResponse.send()
+end procedure

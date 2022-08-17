@@ -1,0 +1,41 @@
+procedure main(argc, argv[])
+    crear colaSockets
+    crear requests
+    crear handlers
+    crear http server
+    crear sumas seriales
+
+end procedure
+
+procedure start(argc, argv) 
+    create bool stopApps := false
+    if analyzeArguments(argc, argv) then
+        for i := 0 to applications.size do
+            startApp(aplications[i])
+        end
+        stopApps := true
+        create producingQueue = queue<Sockets>()
+        for i := 0 to max_connections do 
+            create httpConnectionHandler := httpConnectionHandler(applications)
+            handlers[i]->setConsumingQueue(producingQueue)
+            handlers[i]->startThread()
+        end
+        listenForConnections()
+        acceptAllConnections()
+    else
+        print("Excepcion: no se pueden aceptar mas conexiones")
+    end
+    for i := 0 to max_connections do
+        create socket := Socket() 
+        colaSockets := push(socket)
+    end for
+    for i := 0 to max_connections do
+        waitToFinish(handlers[i])
+        delete handlers[i]
+    end for
+    if stopApps equals true then
+        for i := 0 to applications.size() do
+            stop(applications[i])
+        end for
+    end if
+end procedure
